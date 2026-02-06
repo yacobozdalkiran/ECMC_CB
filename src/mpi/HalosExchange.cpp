@@ -541,3 +541,84 @@ void mpi::ecmccb::fill_and_exchange(GaugeField& field, const GeometryCB& geo, Ha
     fill_halos_ecmc(field, geo, halo);
     exchange_halos_ecmc(field, geo, halo, topo);
 }
+
+// Sends and receive all the send buffers of halo_obs into the correct recv buffers
+void mpi::haloobs::exchange_halos_obs(HaloObs& halo_obs, mpi::MpiTopology& topo,
+                                          MPI_Request* reqs) {
+    // Set up the recv buffers
+    MPI_Irecv(halo_obs.fx0_recv.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.x0, 0, topo.cart_comm,
+              &reqs[0]);
+    MPI_Irecv(halo_obs.fxL_recv.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.xL, 1, topo.cart_comm,
+              &reqs[1]);
+    MPI_Irecv(halo_obs.fy0_recv.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.y0, 2, topo.cart_comm,
+              &reqs[2]);
+    MPI_Irecv(halo_obs.fyL_recv.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.yL, 3, topo.cart_comm,
+              &reqs[3]);
+    MPI_Irecv(halo_obs.fz0_recv.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.z0, 4, topo.cart_comm,
+              &reqs[4]);
+    MPI_Irecv(halo_obs.fzL_recv.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.zL, 5, topo.cart_comm,
+              &reqs[5]);
+    MPI_Irecv(halo_obs.ft0_recv.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.t0, 6, topo.cart_comm,
+              &reqs[6]);
+    MPI_Irecv(halo_obs.ftL_recv.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.tL, 7, topo.cart_comm,
+              &reqs[7]);
+    // Initiates the sends
+    MPI_Isend(halo_obs.fxL_send.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.xL, 0, topo.cart_comm,
+              &reqs[8]);
+    MPI_Isend(halo_obs.fx0_send.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.x0, 1, topo.cart_comm,
+              &reqs[9]);
+    MPI_Isend(halo_obs.fyL_send.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.yL, 2, topo.cart_comm,
+              &reqs[10]);
+    MPI_Isend(halo_obs.fy0_send.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.y0, 3, topo.cart_comm,
+              &reqs[11]);
+    MPI_Isend(halo_obs.fzL_send.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.zL, 4, topo.cart_comm,
+              &reqs[12]);
+    MPI_Isend(halo_obs.fz0_send.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.z0, 5, topo.cart_comm,
+              &reqs[13]);
+    MPI_Isend(halo_obs.ftL_send.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.tL, 6, topo.cart_comm,
+              &reqs[14]);
+    MPI_Isend(halo_obs.ft0_send.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.t0, 7, topo.cart_comm,
+              &reqs[15]);
+    // The Wait_all is after the computation of the observable on the bulk of the lattice to
+    // optimize data flux
+}
+
+
+// Fills the send buffers of halo_obs with the corresponding faces of the gauge field
+void mpi::haloobs::fill_halo_obs_send(const GaugeField& field, const GeometryCB &geo,
+                                          HaloObs& halo_obs) {
+    int L = geo.L;
+    for (int c3 = 0; c3 < L; c3++) {
+        for (int c2 = 0; c2 < L; c2++) {
+            for (int c1 = 0; c1 < L; c1++) {
+                size_t site_halo = halo_obs.index_halo_obs(c1, c2, c3);
+                size_t sitefx0 = geo.index(0, c1, c2, c3);
+                size_t sitefxL = geo.index(L - 1, c1, c2, c3);
+                size_t sitefy0 = geo.index(c1, 0, c2, c3);
+                size_t sitefyL = geo.index(c1, L - 1, c2, c3);
+                size_t sitefz0 = geo.index(c1, c2, 0, c3);
+                size_t sitefzL = geo.index(c1, c2, L - 1, c3);
+                size_t siteft0 = geo.index(c1, c2, c3, 0);
+                size_t siteftL = geo.index(c1, c2, c3, L - 1);
+                for (int mu = 0; mu < 4; mu++) {
+                    halo_obs.view_link_halo_obs(fx0, send, site_halo, mu) =
+                        field.view_link_const(sitefx0, mu);
+                    halo_obs.view_link_halo_obs(fxL, send, site_halo, mu) =
+                        field.view_link_const(sitefxL, mu);
+                    halo_obs.view_link_halo_obs(fy0, send, site_halo, mu) =
+                        field.view_link_const(sitefy0, mu);
+                    halo_obs.view_link_halo_obs(fyL, send, site_halo, mu) =
+                        field.view_link_const(sitefyL, mu);
+                    halo_obs.view_link_halo_obs(fz0, send, site_halo, mu) =
+                        field.view_link_const(sitefz0, mu);
+                    halo_obs.view_link_halo_obs(fzL, send, site_halo, mu) =
+                        field.view_link_const(sitefzL, mu);
+                    halo_obs.view_link_halo_obs(ft0, send, site_halo, mu) =
+                        field.view_link_const(siteft0, mu);
+                    halo_obs.view_link_halo_obs(ftL, send, site_halo, mu) =
+                        field.view_link_const(siteftL, mu);
+                }
+            }
+        }
+    }
+}

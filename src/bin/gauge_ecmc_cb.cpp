@@ -3,6 +3,7 @@
 #include "../gauge/GaugeField.h"
 #include "../mpi/MpiTopology.h"
 #include "../mpi/HalosExchange.h"
+#include "../observables/observables_mpi.h"
 
 int main(int argc, char* argv[]) {
     //Initialize MPI
@@ -12,8 +13,9 @@ int main(int argc, char* argv[]) {
     int L = 5;
     GeometryCB geo(L);
     GaugeField field(geo);
-    std::mt19937_64 rng(123);
-    field.hot_start(rng);
+    std::random_device rd;
+    std::mt19937_64 rng(rd());
+ //   field.hot_start(rng);
 
     //MPI
     int n_core_dims = 2;
@@ -37,6 +39,23 @@ int main(int argc, char* argv[]) {
         std::cout << "Shift succeded !\n";
     }
 
+    //Test fill halos ecmc (in field)
+    if (topo.rank == 0){
+        std::cout << "Attempting halos fill...\n";
+    }
+    mpi::ecmccb::fill_and_exchange(field, geo, halos_cb, topo);
+    if (topo.rank == 0){
+        std::cout << "Success !\n";
+    } 
+
+    //Test plaquette
+    HaloObs halo_obs(geo);
+    double p = mpi::haloobs::mean_plaquette_global(field, geo, halo_obs, topo);
+    if (topo.rank == 0){
+        std::cout << "Mean plaquette : " << p << "\n";
+    }
+
+    
 
     //End MPI
     MPI_Finalize();
