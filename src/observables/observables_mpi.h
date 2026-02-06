@@ -16,4 +16,9 @@ namespace mpi::haloobs {
     double mean_plaquette_global(const GaugeField &field, const GeometryCB &geo, HaloObs &halo_obs, mpi::MpiTopology &topo);
 }
 
+namespace mpi::nohalo{
+    double mean_plaquette_local(const GaugeField &field, const GeometryCB &geo);
+    double mean_plaquette_global(const GaugeField &field, const GeometryCB &geo, MpiTopology &topo);
+}
+
 #endif //INC_4D_MPI_OBSERVABLES_H

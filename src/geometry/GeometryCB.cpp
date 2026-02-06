@@ -219,7 +219,7 @@ GeometryCB::GeometryCB(int L_) {
     for (int t = -1; t <= L; t++) {
         for (int z = -1; z <= L; z++) {
             for (int y = -1; y <= L; y++) {
-                for (int x = 0; x <= L; x++) {
+                for (int x = -1; x <= L; x++) {
                     bool link_is_frozen = false;
                     if (x == -1 or y == -1 or z == -1 or t == -1) link_is_frozen = true;
                     if (x == L or y == L or z == L or t == L) link_is_frozen = true;
