@@ -1,7 +1,8 @@
 #include <iostream>
+
 #include "../gauge/GaugeField.h"
 
-int main(int argc, char* argv[]){
+int main() {
     int L = 5;
     GeometryCB geo(L);
     GaugeField field(geo);

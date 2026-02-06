@@ -2,6 +2,7 @@
 #define GEOMETRYCB_H
 
 #include <vector>
+
 #include "types.h"
 
 class GeometryCB {
