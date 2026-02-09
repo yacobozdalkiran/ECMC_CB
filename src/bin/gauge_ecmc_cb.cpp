@@ -18,12 +18,11 @@ int main(int argc, char* argv[]) {
     GeometryCB geo(L);
     GaugeField field(geo);
     std::random_device rd;
-    std::mt19937_64 rng(123 + topo.rank);
+    std::mt19937_64 rng(rd() + topo.rank);
     field.hot_start(rng);
 
-
     // Test plaquette
-    
+
     // HalosObs
     HaloObs halo_obs(geo);
     double p = mpi::haloobs::mean_plaquette_global(field, geo, halo_obs, topo);
@@ -34,7 +33,7 @@ int main(int argc, char* argv[]) {
     if (topo.rank == 0) {
         std::cout << "NO HALOS ===============================\n";
     }
-    //HalosCB
+    // HalosCB
     HalosCB halos_cb(geo);
     mpi::ecmccb::fill_and_exchange(field, geo, halos_cb, topo);
     p = mpi::nohalo::mean_plaquette_global(field, geo, topo);
@@ -42,13 +41,10 @@ int main(int argc, char* argv[]) {
         std::cout << "Mean plaquette before shift : " << p << "\n";
     }
 
-    //Shift
+    // Shift
     ShiftParams sp{shift_type::pos, halo_coord::X, 3};
     HalosShift halos_shift(sp.L_shift, geo);
-    mpi::shiftcb::shift(field, geo, halos_shift, topo, sp);
-    if (topo.rank == 0){
-        std::cout << "Shift...\n";
-    }
+    mpi::shiftcb::random_shift(field, geo, halos_shift, topo, sp, rng);
 
     p = mpi::haloobs::mean_plaquette_global(field, geo, halo_obs, topo);
     if (topo.rank == 0) {
@@ -58,13 +54,36 @@ int main(int argc, char* argv[]) {
     if (topo.rank == 0) {
         std::cout << "NO HALOS ===============================\n";
     }
-    //HalosCB
+    // HalosCB
     mpi::ecmccb::fill_and_exchange(field, geo, halos_cb, topo);
     p = mpi::nohalo::mean_plaquette_global(field, geo, topo);
     if (topo.rank == 0) {
         std::cout << "Mean plaquette after shift : " << p << "\n";
     }
 
+    // Check staples
+    for (int t = 0; t < L; t++) {
+        for (int z = 0; z < L; z++) {
+            for (int y = 0; y < L; y++) {
+                for (int x = 0; x < L; x++) {
+                    size_t site = geo.index(x, y, z, t);  // x
+                    for (int mu = 0; mu < 4; mu++) {
+                        if (!geo.is_frozen(site, mu)) {
+                            for (int j = 0; j < 6; j++) {
+                                for (int i = 0; i < 3; i++) {
+                                    if (geo.links_staples[geo.index_staples(site, mu, j, i)]
+                                            .first == SIZE_MAX) {
+                                        std::cerr << "Undefined staples link !\n";
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    std::cout << "All staples links checked !\n";
 
     // End MPI
     MPI_Finalize();
