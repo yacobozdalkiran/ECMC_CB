@@ -3,7 +3,7 @@
 //
 
 #include "heatbath_mpi.h"
-
+#include "../mpi/HalosExchange.h"
 #include "../observables/observables_mpi.h"
 #include "heatbath.h"
 
@@ -48,7 +48,7 @@ void mpi::heatbathcb::sweep(GaugeField& field, const GeometryCB& geo, double bet
 
 std::vector<double> mpi::heatbathcb::samples(GaugeField& field, const GeometryCB& geo,
                                              MpiTopology& topo, const HbParams& params,
-                                             std::mt19937_64& rng, parity active_parity) {
+                                             std::mt19937_64& rng, parity active_parity, HalosCB& halo_cb) {
     std::vector<double> meas(params.N_samples);
     for (int m = 0; m < params.N_samples; m++) {
         // Update
@@ -58,7 +58,8 @@ std::vector<double> mpi::heatbathcb::samples(GaugeField& field, const GeometryCB
             }
         }
         // Sample
-        double p = mpi::nohalo::mean_plaquette_global(field, geo, topo);
+        mpi::haloscb::fill_and_exchange(field, geo, halo_cb, topo);
+        double p = mpi::nohalo::mean_plaquette_global(field, geo, topo, halo_cb);
         if (topo.rank == 0) {
             std::cout << "Sample " << m << ", <P> = " << p << " ";
             std::cout << "\n";

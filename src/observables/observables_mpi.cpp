@@ -120,7 +120,8 @@ double mpi::nohalo::mean_plaquette_local(const GaugeField& field, const Geometry
 }
 
 //Computation of global mean plaquette with halos embedded in field (needs field halos exchanges first)
-double mpi::nohalo::mean_plaquette_global(const GaugeField &field, const GeometryCB &geo, MpiTopology &topo){
+double mpi::nohalo::mean_plaquette_global(GaugeField &field, const GeometryCB &geo, MpiTopology &topo, HalosCB &halo_cb){
+    mpi::haloscb::fill_and_exchange(field, geo, halo_cb, topo);
     double local_mean_plaquette = mean_plaquette_local(field, geo);
     double global_mean_plaquette = 0.0;
     MPI_Allreduce(&local_mean_plaquette, &global_mean_plaquette, 1, MPI_DOUBLE, MPI_SUM,

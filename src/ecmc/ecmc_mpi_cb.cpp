@@ -6,7 +6,10 @@
 
 #include <iostream>
 
+#include "../mpi/HalosExchange.h"
+#include "../observables/observables_mpi.h"
 #include "../su3/utils.h"
+
 
 // Computes the list of the 6 staples around a gauge link
 void mpi::ecmccb::compute_list_staples(const GaugeField& field, const GeometryCB& geo, size_t site,
@@ -254,7 +257,7 @@ void mpi::ecmccb::update(GaugeField& field, size_t site, int mu, double theta, i
 // Returns a random non frozen site
 size_t mpi::ecmccb::random_site(const GeometryCB& geo, std::mt19937_64& rng) {
     int L = geo.L;
-    std::uniform_int_distribution random_coord(0, L - 1);
+    std::uniform_int_distribution random_coord(1, L - 2);
     int x = random_coord(rng);
     int y = random_coord(rng);
     int z = random_coord(rng);
@@ -265,7 +268,8 @@ size_t mpi::ecmccb::random_site(const GeometryCB& geo, std::mt19937_64& rng) {
 // Generates samples of global mean plaquette using ECMC with frozen BC
 std::vector<double> mpi::ecmccb::samples_improved(GaugeField& field, const GeometryCB& geo,
                                                   const ECMCParams& params, std::mt19937_64& rng,
-                                                  mpi::MpiTopology& topo, parity active_parity) {
+                                                  mpi::MpiTopology& topo, parity active_parity,
+                                                  HalosCB& halo_cb) {
     double beta = params.beta;
     int N_samples = params.N_samples;
     double param_theta_sample = params.param_theta_sample;
@@ -326,7 +330,7 @@ std::vector<double> mpi::ecmccb::samples_improved(GaugeField& field, const Geome
     int samples = 0;
     std::array<double, 2> deltas = {0.0, 0.0};
     // size_t event_counter = 0;
-    std::vector<double> meas_plaquette(N_samples, 0.0);
+    std::vector<double> meas_plaquette{};
     if (topo.p == active_parity) {
         while (samples < N_samples) {
             if (lift_counter % N_set == 0) {
@@ -354,7 +358,7 @@ std::vector<double> mpi::ecmccb::samples_improved(GaugeField& field, const Geome
                     // On sample
                     theta_update = theta_sample - theta_parcouru_sample;
                     update(field, site_current, mu_current, theta_update, epsilon_current, R);
-                    double plaq = mpi::nohalo::mean_plaquette_global(field, geo, topo);
+                    double plaq = mpi::nohalo::mean_plaquette_global(field, geo, topo, halo_cb);
                     if (topo.rank == 0) {
                         std::cout << "Sample " << samples << ", ";
                         std::cout << "<P> = " << plaq << "\n";
@@ -403,7 +407,7 @@ std::vector<double> mpi::ecmccb::samples_improved(GaugeField& field, const Geome
                     theta_update = theta_sample - theta_parcouru_sample;
                     update(field, site_current, mu_current, theta_update, epsilon_current, R);
                     // On sample
-                    double plaq = mpi::nohalo::mean_plaquette_global(field, geo, topo);
+                    double plaq = mpi::nohalo::mean_plaquette_global(field, geo, topo, halo_cb);
                     if (topo.rank == 0) {
                         std::cout << "Sample " << samples << ", ";
                         std::cout << "<P> = " << plaq << "\n";
@@ -463,11 +467,12 @@ std::vector<double> mpi::ecmccb::samples_improved(GaugeField& field, const Geome
         }
     } else {
         while (samples < N_samples) {
-            double plaq = mpi::nohalo::mean_plaquette_global(field, geo, topo);
+            double plaq = mpi::nohalo::mean_plaquette_global(field, geo, topo, halo_cb);
             if (topo.rank == 0) {
                 std::cout << "Sample " << samples << ", ";
                 std::cout << "<P> = " << plaq << "\n";
             }
+            meas_plaquette.emplace_back(plaq);
             samples++;
         }
     }

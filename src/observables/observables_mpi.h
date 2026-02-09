@@ -7,6 +7,7 @@
 
 #include "../gauge/GaugeField.h"
 #include "../mpi/HalosObs.h"
+#include "../mpi/HalosCB.h"
 #include "../mpi/MpiTopology.h"
 
 namespace mpi::haloobs {
@@ -18,7 +19,7 @@ namespace mpi::haloobs {
 
 namespace mpi::nohalo{
     double mean_plaquette_local(const GaugeField &field, const GeometryCB &geo);
-    double mean_plaquette_global(const GaugeField &field, const GeometryCB &geo, MpiTopology &topo);
+    double mean_plaquette_global(GaugeField &field, const GeometryCB &geo, MpiTopology &topo, HalosCB& halo_cb);
 }
 
 #endif //INC_4D_MPI_OBSERVABLES_H

@@ -9,11 +9,12 @@
 #include "../su3/utils.h"
 #include "../io/params.h"
 #include "../mpi/MpiTopology.h"
+#include "../mpi/HalosCB.h"
 
 namespace mpi::heatbathcb {
     void hit(GaugeField &field, const GeometryCB &geo, size_t site, int mu, double beta, SU3 &A, std::mt19937_64 &rng);
     void sweep(GaugeField &field, const GeometryCB &geo, double beta, int N_hits, std::mt19937_64 &rng);
-    std::vector<double> samples(GaugeField &field, const GeometryCB &geo, MpiTopology &topo, const HbParams &params, std::mt19937_64 &rng, parity active_parity);
+    std::vector<double> samples(GaugeField &field, const GeometryCB &geo, MpiTopology &topo, const HbParams &params, std::mt19937_64 &rng, parity active_parity, HalosCB& halo_cb);
 }
 
 #endif //ECMC_MPI_HEATBATH_MPI_H
