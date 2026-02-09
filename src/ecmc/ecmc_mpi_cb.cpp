@@ -6,7 +6,6 @@
 
 #include <iostream>
 
-#include "../mpi/HalosExchange.h"
 #include "../observables/observables_mpi.h"
 #include "../su3/utils.h"
 
