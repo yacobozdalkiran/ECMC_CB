@@ -101,15 +101,44 @@ void hb() {
         // Random shift
         mpi::shiftcb::random_shift(field, geo, halo_shift, topo, sp, rng);
     }
-
 }
 
+void check_rd_shift(){
+    // MPI
+    int n_core_dims = 2;
+    mpi::MpiTopology topo(n_core_dims);
+
+    // Lattice creation + RNG
+    int L = 4;
+    GeometryCB geo(L);
+    GaugeField field(geo);
+    std::random_device rd;
+    std::mt19937_64 rng(rd() + topo.rank);
+    field.hot_start(rng);
+
+    // Test HB
+    HalosCB halo_cb(geo);
+
+    // Shift objects
+    HalosShift halo_shift(geo.L, geo);
+    ShiftParams sp{.stype = pos, .coord = UNSET, .L_shift = 0};
+
+    mpi::haloscb::fill_and_exchange(field, geo, halo_cb, topo);
+    double p = mpi::nohalo::mean_plaquette_global(field, geo, topo);
+    if (topo.rank == 0){
+        std::cout << "Before shift P = " << p <<"\n";
+    }
+    mpi::shiftcb::random_shift(field, geo, halo_shift, topo, sp, rng);
+    mpi::haloscb::fill_and_exchange(field, geo, halo_cb, topo);
+    p = mpi::nohalo::mean_plaquette_global(field, geo, topo);
+    if (topo.rank == 0){
+        std::cout << "After shift P = " << p <<"\n";
+    }
+}
 int main(int argc, char* argv[]) {
     // Initialize MPI
     MPI_Init(&argc, &argv);
-
-    hb();
-
+    check_rd_shift();
     // End MPI
     MPI_Finalize();
 }
