@@ -1,89 +1,114 @@
 #include <iostream>
 
+#include "../ecmc/ecmc_mpi_cb.h"
 #include "../gauge/GaugeField.h"
 #include "../mpi/HalosExchange.h"
 #include "../mpi/MpiTopology.h"
-#include "../observables/observables_mpi.h"
+#include "../heatbath/heatbath_mpi.h"
 
-int main(int argc, char* argv[]) {
-    // Initialize MPI
-    MPI_Init(&argc, &argv);
-
+void ecmc() {
     // MPI
     int n_core_dims = 2;
     mpi::MpiTopology topo(n_core_dims);
 
     // Lattice creation + RNG
-    int L = 5;
+    int L = 4;
     GeometryCB geo(L);
     GaugeField field(geo);
     std::random_device rd;
     std::mt19937_64 rng(rd() + topo.rank);
     field.hot_start(rng);
 
-    // Test plaquette
+    // Test ECMC
+    HalosCB halo_cb(geo);
 
-    // HalosObs
-    HaloObs halo_obs(geo);
-    double p = mpi::haloobs::mean_plaquette_global(field, geo, halo_obs, topo);
-    if (topo.rank == 0) {
-        std::cout << "WITH HALOS ===============================\n";
-        std::cout << "Mean plaquette before shift : " << p << "\n";
-    }
-    if (topo.rank == 0) {
-        std::cout << "NO HALOS ===============================\n";
-    }
-    // HalosCB
-    HalosCB halos_cb(geo);
-    mpi::ecmccb::fill_and_exchange(field, geo, halos_cb, topo);
-    p = mpi::nohalo::mean_plaquette_global(field, geo, topo);
-    if (topo.rank == 0) {
-        std::cout << "Mean plaquette before shift : " << p << "\n";
-    }
+    // Params ECMC
+    ECMCParams ep{.beta = 6.0,
+                  .N_samples = 20,
+                  .param_theta_sample = 900,
+                  .param_theta_refresh = 1400,
+                  .poisson = false,
+                  .epsilon_set = 0.15};
 
-    // Shift
-    ShiftParams sp{shift_type::pos, halo_coord::X, 3};
-    HalosShift halos_shift(sp.L_shift, geo);
-    mpi::shiftcb::random_shift(field, geo, halos_shift, topo, sp, rng);
+    // Shift objects
+    HalosShift halo_shift(geo.L / 2, geo);
+    ShiftParams sp{.stype = pos, .coord = UNSET, .L_shift = 0};
 
-    p = mpi::haloobs::mean_plaquette_global(field, geo, halo_obs, topo);
-    if (topo.rank == 0) {
-        std::cout << "WITH HALOS ===============================\n";
-        std::cout << "Mean plaquette after shift : " << p << "\n";
-    }
-    if (topo.rank == 0) {
-        std::cout << "NO HALOS ===============================\n";
-    }
-    // HalosCB
-    mpi::ecmccb::fill_and_exchange(field, geo, halos_cb, topo);
-    p = mpi::nohalo::mean_plaquette_global(field, geo, topo);
-    if (topo.rank == 0) {
-        std::cout << "Mean plaquette after shift : " << p << "\n";
-    }
+    int Ntot = 1000;
 
-    // Check staples
-    for (int t = 0; t < L; t++) {
-        for (int z = 0; z < L; z++) {
-            for (int y = 0; y < L; y++) {
-                for (int x = 0; x < L; x++) {
-                    size_t site = geo.index(x, y, z, t);  // x
-                    for (int mu = 0; mu < 4; mu++) {
-                        if (!geo.is_frozen(site, mu)) {
-                            for (int j = 0; j < 6; j++) {
-                                for (int i = 0; i < 3; i++) {
-                                    if (geo.links_staples[geo.index_staples(site, mu, j, i)]
-                                            .first == SIZE_MAX) {
-                                        std::cerr << "Undefined staples link !\n";
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+    for (int i = 0; i < Ntot; i++) {
+        // Even parity :
+        if (topo.rank == 0) {
+            std::cout << "Even parity :\n";
         }
+        parity active_parity = even;
+        mpi::haloscb::fill_and_exchange(field, geo, halo_cb, topo);
+        mpi::ecmccb::samples_improved(field, geo, ep, rng, topo, active_parity);
+
+        // Odd parity :
+        if (topo.rank == 0) {
+            std::cout << "Odd parity :\n";
+        }
+        active_parity = odd;
+        mpi::haloscb::fill_and_exchange(field, geo, halo_cb, topo);
+        mpi::ecmccb::samples_improved(field, geo, ep, rng, topo, active_parity);
+
+        // Random shift
+        mpi::shiftcb::random_shift(field, geo, halo_shift, topo, sp, rng);
     }
-    std::cout << "All staples links checked !\n";
+}
+
+void hb() {
+    // MPI
+    int n_core_dims = 2;
+    mpi::MpiTopology topo(n_core_dims);
+
+    // Lattice creation + RNG
+    int L = 4;
+    GeometryCB geo(L);
+    GaugeField field(geo);
+    std::random_device rd;
+    std::mt19937_64 rng(rd() + topo.rank);
+    field.hot_start(rng);
+
+    // Test HB
+    HalosCB halo_cb(geo);
+    HbParams hp{.beta = 6.0, .N_samples = 20, .N_hits = 3, .N_sweeps = 3};
+
+    // Shift objects
+    HalosShift halo_shift(geo.L, geo);
+    ShiftParams sp{.stype = pos, .coord = UNSET, .L_shift = 0};
+
+    int Ntot = 1000;
+
+    for (int i = 0; i < Ntot; i++) {
+        // Even parity :
+        if (topo.rank == 0) {
+            std::cout << "Even parity :\n";
+        }
+        parity active_parity = even;
+        mpi::haloscb::fill_and_exchange(field, geo, halo_cb, topo);
+        mpi::heatbathcb::samples(field, geo, topo, hp, rng, active_parity);
+
+        // Odd parity :
+        if (topo.rank == 0) {
+            std::cout << "Odd parity :\n";
+        }
+        active_parity = odd;
+        mpi::haloscb::fill_and_exchange(field, geo, halo_cb, topo);
+        mpi::heatbathcb::samples(field, geo, topo, hp, rng, active_parity);
+
+        // Random shift
+        mpi::shiftcb::random_shift(field, geo, halo_shift, topo, sp, rng);
+    }
+
+}
+
+int main(int argc, char* argv[]) {
+    // Initialize MPI
+    MPI_Init(&argc, &argv);
+
+    hb();
 
     // End MPI
     MPI_Finalize();

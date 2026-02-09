@@ -44,6 +44,9 @@ add_executable(gauge_ecmc_cb src/bin/gauge_ecmc_cb.cpp
         src/mpi/types.h
         src/mpi/HalosObs.h
         src/observables/observables_mpi.cpp
+        src/ecmc/ecmc_mpi_cb.cpp
+        src/heatbath/heatbath.cpp
+        src/heatbath/heatbath_mpi.cpp
 )
 
 

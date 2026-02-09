@@ -466,19 +466,20 @@ void mpi::shiftcb::shift(GaugeField& field, const GeometryCB& geo, HalosShift& h
 void mpi::shiftcb::random_shift(GaugeField& field, const GeometryCB& geo, HalosShift& halo,
                                 MpiTopology& topo, ShiftParams& sp, std::mt19937_64& rng) {
     int l_shift_x{}, l_shift_y{}, l_shift_z{}, l_shift_t{};
-    std::uniform_int_distribution<int> rand_l_shift(0, geo.L/2);
+    std::uniform_int_distribution<int> rand_l_shift(0, geo.L - 1);
     l_shift_x = rand_l_shift(rng);
     l_shift_y = rand_l_shift(rng);
     l_shift_z = rand_l_shift(rng);
     l_shift_t = rand_l_shift(rng);
 
-    MPI_Bcast(&l_shift_x, sizeof(int), MPI_BYTE, 0, topo.cart_comm);
-    MPI_Bcast(&l_shift_y, sizeof(int), MPI_BYTE, 0, topo.cart_comm);
-    MPI_Bcast(&l_shift_z, sizeof(int), MPI_BYTE, 0, topo.cart_comm);
-    MPI_Bcast(&l_shift_t, sizeof(int), MPI_BYTE, 0, topo.cart_comm);
+    MPI_Bcast(&l_shift_x, 1, MPI_INT, 0, topo.cart_comm);
+    MPI_Bcast(&l_shift_y, 1, MPI_INT, 0, topo.cart_comm);
+    MPI_Bcast(&l_shift_z, 1, MPI_INT, 0, topo.cart_comm);
+    MPI_Bcast(&l_shift_t, 1, MPI_INT, 0, topo.cart_comm);
 
-    if (topo.rank == 0){
-        std::cout << "Shift (" << l_shift_x << ", " << l_shift_y << ", " << l_shift_z << ", " << l_shift_t << ")\n";
+    if (topo.rank == 0) {
+        std::cout << "Shift (" << l_shift_x << ", " << l_shift_y << ", " << l_shift_z << ", "
+                  << l_shift_t << ")\n";
     }
 
     sp.coord = X;
@@ -499,7 +500,7 @@ void mpi::shiftcb::random_shift(GaugeField& field, const GeometryCB& geo, HalosS
 }
 
 // Fills the halos with links of coord 0 or L-1 depending
-void mpi::ecmccb::fill_halos_ecmc(const GaugeField& field, const GeometryCB& geo, HalosCB& halo) {
+void mpi::haloscb::fill_halos_ecmc(const GaugeField& field, const GeometryCB& geo, HalosCB& halo) {
     int L = geo.L;
     for (int c3 = 0; c3 < geo.L; c3++) {
         for (int c2 = 0; c2 < geo.L; c2++) {
@@ -529,7 +530,7 @@ void mpi::ecmccb::fill_halos_ecmc(const GaugeField& field, const GeometryCB& geo
 }
 
 // Fills the halos in GaugeField with content of HalosCB of neighbors
-void mpi::ecmccb::exchange_halos_ecmc(GaugeField& field, const GeometryCB& geo, const HalosCB& halo,
+void mpi::haloscb::exchange_halos_ecmc(GaugeField& field, const GeometryCB& geo, const HalosCB& halo,
                                       mpi::MpiTopology& topo) {
     MPI_Request reqs[16];
     int L = geo.L;
@@ -574,7 +575,7 @@ void mpi::ecmccb::exchange_halos_ecmc(GaugeField& field, const GeometryCB& geo, 
 }
 
 // Fills the halos send and exchanges with the field
-void mpi::ecmccb::fill_and_exchange(GaugeField& field, const GeometryCB& geo, HalosCB& halo,
+void mpi::haloscb::fill_and_exchange(GaugeField& field, const GeometryCB& geo, HalosCB& halo,
                                     mpi::MpiTopology& topo) {
     fill_halos_ecmc(field, geo, halo);
     exchange_halos_ecmc(field, geo, halo, topo);

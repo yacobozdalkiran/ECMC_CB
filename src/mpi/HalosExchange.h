@@ -25,7 +25,7 @@ void random_shift(GaugeField& field, const GeometryCB& geo, HalosShift& halo, Mp
                   ShiftParams& sp, std::mt19937_64& rng);
 };  // namespace mpi::shiftcb
 
-namespace mpi::ecmccb {
+namespace mpi::haloscb {
 void fill_halos_ecmc(const GaugeField& field, const GeometryCB& geo, HalosCB& halo);
 void exchange_halos_ecmc(GaugeField& field, const GeometryCB& geo, const HalosCB& halo,
                          mpi::MpiTopology& topo);
