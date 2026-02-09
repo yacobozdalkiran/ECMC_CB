@@ -9,7 +9,6 @@
 #include "../observables/observables_mpi.h"
 #include "../su3/utils.h"
 
-
 // Computes the list of the 6 staples around a gauge link
 void mpi::ecmccb::compute_list_staples(const GaugeField& field, const GeometryCB& geo, size_t site,
                                        int mu, std::array<SU3, 6>& list_staple) {
