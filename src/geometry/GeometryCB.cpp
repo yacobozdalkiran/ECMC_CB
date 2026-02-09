@@ -7,209 +7,34 @@ GeometryCB::GeometryCB(int L_) {
     V = L * L * L * L;
     V_halo = L * L * L;
     neighbors.resize((V + 8 * V_halo) * 8, SIZE_MAX);
-    for (int t = 0; t < L; t++) {
-        for (int z = 0; z < L; z++) {
-            for (int y = 0; y < L; y++) {
-                for (int x = 0; x < L; x++) {
-                    size_t i = index_w_halo(x, y, z, t);
-                    // Interior (field)
-                    if (x + 1 < L) neighbors[index_neigh(i, 0, up)] = index((x + 1), y, z, t);
-                    if (x - 1 >= 0) neighbors[index_neigh(i, 0, down)] = index((x - 1), y, z, t);
-                    if (y + 1 < L) neighbors[index_neigh(i, 1, up)] = index(x, (y + 1), z, t);
-                    if (y - 1 >= 0) neighbors[index_neigh(i, 1, down)] = index(x, (y - 1), z, t);
-                    if (z + 1 < L) neighbors[index_neigh(i, 2, up)] = index(x, y, (z + 1), t);
-                    if (z - 1 >= 0) neighbors[index_neigh(i, 2, down)] = index(x, y, (z - 1), t);
-                    if (t + 1 < L) neighbors[index_neigh(i, 3, up)] = index(x, y, z, (t + 1));
-                    if (t - 1 >= 0) neighbors[index_neigh(i, 3, down)] = index(x, y, z, (t - 1));
-                    // Boundaries (halos)
-                    if (x + 1 == L) neighbors[index_neigh(i, 0, up)] = V + index_halo_ecmc(y, z, t);
-                    if (y + 1 == L)
-                        neighbors[index_neigh(i, 1, up)] = V + V_halo + index_halo_ecmc(x, z, t);
-                    if (z + 1 == L)
-                        neighbors[index_neigh(i, 2, up)] =
-                            V + 2 * V_halo + index_halo_ecmc(x, y, t);
-                    if (t + 1 == L)
-                        neighbors[index_neigh(i, 3, up)] =
-                            V + 3 * V_halo + index_halo_ecmc(x, y, z);
-                    if (x - 1 == -1)
-                        neighbors[index_neigh(i, 0, down)] =
-                            V + 4 * V_halo + index_halo_ecmc(y, z, t);
-                    if (y - 1 == -1)
-                        neighbors[index_neigh(i, 1, down)] =
-                            V + 5 * V_halo + index_halo_ecmc(x, z, t);
-                    if (z - 1 == -1)
-                        neighbors[index_neigh(i, 2, down)] =
-                            V + 6 * V_halo + index_halo_ecmc(x, y, t);
-                    if (t - 1 == -1)
-                        neighbors[index_neigh(i, 3, down)] =
-                            V + 7 * V_halo + index_halo_ecmc(x, y, z);
+    // On étend la boucle de -1 à L pour couvrir la "coquille" des halos
+    for (int t = -1; t <= L; t++) {
+        for (int z = -1; z <= L; z++) {
+            for (int y = -1; y <= L; y++) {
+                for (int x = -1; x <= L; x++) {
+                    // On ne calcule les voisins que pour les sites qui existent dans notre
+                    // indexation (index_w_halo ne gère pas les coins comme x=-1 ET y=-1, seulement
+                    // une face à la fois)
+                    int out_count = (x == -1 || x == L) + (y == -1 || y == L) +
+                                    (z == -1 || z == L) + (t == -1 || t == L);
+
+                    if (out_count > 1) continue;  // On ignore les coins/arêtes (pas nécessaires)
+
+                    size_t site_idx = index_w_halo(x, y, z, t);
+
+                    // Direction X (mu=0)
+                    neighbors[index_neigh(site_idx, 0, up)] = index_w_halo(x + 1, y, z, t);
+                    neighbors[index_neigh(site_idx, 0, down)] = index_w_halo(x - 1, y, z, t);
+                    // Direction Y (mu=1)
+                    neighbors[index_neigh(site_idx, 1, up)] = index_w_halo(x, y + 1, z, t);
+                    neighbors[index_neigh(site_idx, 1, down)] = index_w_halo(x, y - 1, z, t);
+                    // Direction Z (mu=2)
+                    neighbors[index_neigh(site_idx, 2, up)] = index_w_halo(x, y, z + 1, t);
+                    neighbors[index_neigh(site_idx, 2, down)] = index_w_halo(x, y, z - 1, t);
+                    // Direction T (mu=3)
+                    neighbors[index_neigh(site_idx, 3, up)] = index_w_halo(x, y, z, t + 1);
+                    neighbors[index_neigh(site_idx, 3, down)] = index_w_halo(x, y, z, t - 1);
                 }
-            }
-        }
-    }
-
-    // Intra-halo
-    for (int c1 = 0; c1 < L; c1++) {
-        for (int c2 = 0; c2 < L; c2++) {
-            for (int c3 = 0; c3 < L; c3++) {
-                size_t i = index_w_halo(L, c1, c2, c3);
-                neighbors[index_neigh(i, 0, down)] = index(L - 1, c1, c2, c3);
-                if (c1 + 1 < L)
-                    neighbors[index_neigh(i, 1, up)] = V + index_halo_ecmc(c1 + 1, c2, c3);
-                if (c1 - 1 >= 0)
-                    neighbors[index_neigh(i, 1, down)] = V + index_halo_ecmc(c1 - 1, c2, c3);
-                if (c2 + 1 < L)
-                    neighbors[index_neigh(i, 2, up)] = V + index_halo_ecmc(c1, c2 + 1, c3);
-                if (c2 - 1 >= 0)
-                    neighbors[index_neigh(i, 2, down)] = V + index_halo_ecmc(c1, c2 - 1, c3);
-                if (c3 + 1 < L)
-                    neighbors[index_neigh(i, 3, up)] = V + index_halo_ecmc(c1, c2, c3 + 1);
-                if (c3 - 1 >= 0)
-                    neighbors[index_neigh(i, 3, down)] = V + index_halo_ecmc(c1, c2, c3 - 1);
-
-                i = index_w_halo(c1, L, c2, c3);
-                neighbors[index_neigh(i, 1, down)] = index(c1, L - 1, c2, c3);
-                if (c1 + 1 < L)
-                    neighbors[index_neigh(i, 0, up)] = V + V_halo + index_halo_ecmc(c1 + 1, c2, c3);
-                if (c1 - 1 >= 0)
-                    neighbors[index_neigh(i, 0, down)] =
-                        V + V_halo + index_halo_ecmc(c1 - 1, c2, c3);
-                if (c2 + 1 < L)
-                    neighbors[index_neigh(i, 2, up)] = V + V_halo + index_halo_ecmc(c1, c2 + 1, c3);
-                if (c2 - 1 >= 0)
-                    neighbors[index_neigh(i, 2, down)] =
-                        V + V_halo + index_halo_ecmc(c1, c2 - 1, c3);
-                if (c3 + 1 < L)
-                    neighbors[index_neigh(i, 3, up)] = V + V_halo + index_halo_ecmc(c1, c2, c3 + 1);
-                if (c3 - 1 >= 0)
-                    neighbors[index_neigh(i, 3, down)] =
-                        V + V_halo + index_halo_ecmc(c1, c2, c3 - 1);
-
-                i = index_w_halo(c1, c2, L, c3);
-                neighbors[index_neigh(i, 2, down)] = index(c1, c2, L - 1, c3);
-                if (c1 + 1 < L)
-                    neighbors[index_neigh(i, 0, up)] =
-                        V + 2 * V_halo + index_halo_ecmc(c1 + 1, c2, c3);
-                if (c1 - 1 >= 0)
-                    neighbors[index_neigh(i, 0, down)] =
-                        V + 2 * V_halo + index_halo_ecmc(c1 - 1, c2, c3);
-                if (c2 + 1 < L)
-                    neighbors[index_neigh(i, 1, up)] =
-                        V + 2 * V_halo + index_halo_ecmc(c1, c2 + 1, c3);
-                if (c2 - 1 >= 0)
-                    neighbors[index_neigh(i, 1, down)] =
-                        V + 2 * V_halo + index_halo_ecmc(c1, c2 - 1, c3);
-                if (c3 + 1 < L)
-                    neighbors[index_neigh(i, 3, up)] =
-                        V + 2 * V_halo + index_halo_ecmc(c1, c2, c3 + 1);
-                if (c3 - 1 >= 0)
-                    neighbors[index_neigh(i, 3, down)] =
-                        V + 2 * V_halo + index_halo_ecmc(c1, c2, c3 - 1);
-
-                i = index_w_halo(c1, c2, c3, L - 1);
-                neighbors[index_neigh(i, 3, down)] = index(c1, c2, c3, L);
-                if (c1 + 1 < L)
-                    neighbors[index_neigh(i, 0, up)] =
-                        V + 3 * V_halo + index_halo_ecmc(c1 + 1, c2, c3);
-                if (c1 - 1 >= 0)
-                    neighbors[index_neigh(i, 0, down)] =
-                        V + 3 * V_halo + index_halo_ecmc(c1 - 1, c2, c3);
-                if (c2 + 1 < L)
-                    neighbors[index_neigh(i, 1, up)] =
-                        V + 3 * V_halo + index_halo_ecmc(c1, c2 + 1, c3);
-                if (c2 - 1 >= 0)
-                    neighbors[index_neigh(i, 1, down)] =
-                        V + 3 * V_halo + index_halo_ecmc(c1, c2 - 1, c3);
-                if (c3 + 1 < L)
-                    neighbors[index_neigh(i, 2, up)] =
-                        V + 3 * V_halo + index_halo_ecmc(c1, c2, c3 + 1);
-                if (c3 - 1 >= 0)
-                    neighbors[index_neigh(i, 2, down)] =
-                        V + 3 * V_halo + index_halo_ecmc(c1, c2, c3 - 1);
-
-                i = index_w_halo(-1, c1, c2, c3);
-                neighbors[index_neigh(i, 0, up)] = index(0, c1, c2, c3);
-                if (c1 + 1 < L)
-                    neighbors[index_neigh(i, 1, up)] =
-                        V + 4 * V_halo + index_halo_ecmc(c1 + 1, c2, c3);
-                if (c1 - 1 >= 0)
-                    neighbors[index_neigh(i, 1, down)] =
-                        V + 4 * V_halo + index_halo_ecmc(c1 - 1, c2, c3);
-                if (c2 + 1 < L)
-                    neighbors[index_neigh(i, 2, up)] =
-                        V + 4 * V_halo + index_halo_ecmc(c1, c2 + 1, c3);
-                if (c2 - 1 >= 0)
-                    neighbors[index_neigh(i, 2, down)] =
-                        V + 4 * V_halo + index_halo_ecmc(c1, c2 - 1, c3);
-                if (c3 + 1 < L)
-                    neighbors[index_neigh(i, 3, up)] =
-                        V + 4 * V_halo + index_halo_ecmc(c1, c2, c3 + 1);
-                if (c3 - 1 >= 0)
-                    neighbors[index_neigh(i, 3, down)] =
-                        V + 4 * V_halo + index_halo_ecmc(c1, c2, c3 - 1);
-
-                i = index_w_halo(c1, -1, c2, c3);
-                neighbors[index_neigh(i, 1, up)] = index(c1, 0, c2, c3);
-                if (c1 + 1 < L)
-                    neighbors[index_neigh(i, 0, up)] =
-                        V + 5 * V_halo + index_halo_ecmc(c1 + 1, c2, c3);
-                if (c1 - 1 >= 0)
-                    neighbors[index_neigh(i, 0, down)] =
-                        V + 5 * V_halo + index_halo_ecmc(c1 - 1, c2, c3);
-                if (c2 + 1 < L)
-                    neighbors[index_neigh(i, 2, up)] =
-                        V + 5 * V_halo + index_halo_ecmc(c1, c2 + 1, c3);
-                if (c2 - 1 >= 0)
-                    neighbors[index_neigh(i, 2, down)] =
-                        V + 5 * V_halo + index_halo_ecmc(c1, c2 - 1, c3);
-                if (c3 + 1 < L)
-                    neighbors[index_neigh(i, 3, up)] =
-                        V + 5 * V_halo + index_halo_ecmc(c1, c2, c3 + 1);
-                if (c3 - 1 >= 0)
-                    neighbors[index_neigh(i, 3, down)] =
-                        V + 5 * V_halo + index_halo_ecmc(c1, c2, c3 - 1);
-
-                i = index_w_halo(c1, c2, -1, c3);
-                neighbors[index_neigh(i, 2, up)] = index(c1, c2, 0, c3);
-                if (c1 + 1 < L)
-                    neighbors[index_neigh(i, 0, up)] =
-                        V + 6 * V_halo + index_halo_ecmc(c1 + 1, c2, c3);
-                if (c1 - 1 >= 0)
-                    neighbors[index_neigh(i, 0, down)] =
-                        V + 6 * V_halo + index_halo_ecmc(c1 - 1, c2, c3);
-                if (c2 + 1 < L)
-                    neighbors[index_neigh(i, 1, up)] =
-                        V + 6 * V_halo + index_halo_ecmc(c1, c2 + 1, c3);
-                if (c2 - 1 >= 0)
-                    neighbors[index_neigh(i, 1, down)] =
-                        V + 6 * V_halo + index_halo_ecmc(c1, c2 - 1, c3);
-                if (c3 + 1 < L)
-                    neighbors[index_neigh(i, 3, up)] =
-                        V + 6 * V_halo + index_halo_ecmc(c1, c2, c3 + 1);
-                if (c3 - 1 >= 0)
-                    neighbors[index_neigh(i, 3, down)] =
-                        V + 6 * V_halo + index_halo_ecmc(c1, c2, c3 - 1);
-
-                i = index_w_halo(c1, c2, c3, -1);
-                neighbors[index_neigh(i, 3, up)] = index(c1, c2, c3, 0);
-                if (c1 + 1 < L)
-                    neighbors[index_neigh(i, 0, up)] =
-                        V + 7 * V_halo + index_halo_ecmc(c1 + 1, c2, c3);
-                if (c1 - 1 >= 0)
-                    neighbors[index_neigh(i, 0, down)] =
-                        V + 7 * V_halo + index_halo_ecmc(c1 - 1, c2, c3);
-                if (c2 + 1 < L)
-                    neighbors[index_neigh(i, 1, up)] =
-                        V + 7 * V_halo + index_halo_ecmc(c1, c2 + 1, c3);
-                if (c2 - 1 >= 0)
-                    neighbors[index_neigh(i, 1, down)] =
-                        V + 7 * V_halo + index_halo_ecmc(c1, c2 - 1, c3);
-                if (c3 + 1 < L)
-                    neighbors[index_neigh(i, 2, up)] =
-                        V + 7 * V_halo + index_halo_ecmc(c1, c2, c3 + 1);
-                if (c3 - 1 >= 0)
-                    neighbors[index_neigh(i, 2, down)] =
-                        V + 7 * V_halo + index_halo_ecmc(c1, c2, c3 - 1);
             }
         }
     }

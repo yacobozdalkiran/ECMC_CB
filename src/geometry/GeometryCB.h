@@ -26,7 +26,7 @@ public:
 
     // Returns the index of the halo site corresponding to (c1,c2,c3) with order x,y,z,t
     [[nodiscard]] size_t index_halo_ecmc(int c1, int c2, int c3) const {
-        return (c3 * L + c2) * L + c1;
+        return (static_cast<size_t>(c3) * L + c2) * L + c1;
     }
 
     // Index of a site taking into account halos

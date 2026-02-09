@@ -52,6 +52,7 @@ void mpi::shiftcb::fill_halo_send(const GaugeField& field, const GeometryCB& geo
             }
         }
     }
+
     if (sp.coord == Z) {
         for (int t = 0; t < geo.L; t++) {
             for (int z_local = 0; z_local < halo.L_shift; z_local++) {
@@ -70,6 +71,7 @@ void mpi::shiftcb::fill_halo_send(const GaugeField& field, const GeometryCB& geo
             }
         }
     }
+
     if (sp.coord == T) {
         for (int t_local = 0; t_local < halo.L_shift; t_local++) {
             for (int z = 0; z < geo.L; z++) {
@@ -288,8 +290,8 @@ void mpi::shiftcb::exchange_halos(HalosShift& halo, mpi::MpiTopology& topo, cons
 }
 
 // Replace the values of the corresponding links of the lattice with those of halo_rec
-void mpi::shiftcb::fill_lattice_with_halo_recv(GaugeField& field, const GeometryCB& geo, HalosShift& halo,
-                                               const ShiftParams& sp) {
+void mpi::shiftcb::fill_lattice_with_halo_recv(GaugeField& field, const GeometryCB& geo,
+                                               HalosShift& halo, const ShiftParams& sp) {
     int L = geo.L;
     int L_shift = halo.L_shift;
     // If positive shift, the local coordinates of the halo corresponds to the coordinates of the
@@ -435,8 +437,8 @@ void mpi::shiftcb::fill_lattice_with_halo_recv(GaugeField& field, const Geometry
 
 // Performs a shift in every node in direction coord, of type stype (positive of negative) and of
 // length L_shift
-void mpi::shiftcb::shift(GaugeField& field, const GeometryCB& geo, HalosShift& halo, MpiTopology& topo,
-                         const ShiftParams& sp) {
+void mpi::shiftcb::shift(GaugeField& field, const GeometryCB& geo, HalosShift& halo,
+                         MpiTopology& topo, const ShiftParams& sp) {
     if (halo.L_shift < sp.L_shift) {
         if (topo.rank == 0) std::cerr << "Wrong halo size : too small\n";
         return;
@@ -490,7 +492,7 @@ void mpi::ecmccb::fill_halos_ecmc(const GaugeField& field, const GeometryCB& geo
     }
 }
 
-// Fills the halos in GaugeField with content of neighboring HalosCB
+// Fills the halos in GaugeField with content of HalosCB of neighbors
 void mpi::ecmccb::exchange_halos_ecmc(GaugeField& field, const GeometryCB& geo, const HalosCB& halo,
                                       mpi::MpiTopology& topo) {
     MPI_Request reqs[16];
@@ -498,38 +500,38 @@ void mpi::ecmccb::exchange_halos_ecmc(GaugeField& field, const GeometryCB& geo, 
     int V = geo.V;
     int V_halo = geo.V_halo;
     // Setting up the recv
-    MPI_Irecv(&field.links[(V + 0 * V_halo) * 4 * 9], L * L * L * 4 * 9, MPI_DOUBLE_COMPLEX,
+    MPI_Irecv(&field.links[(V + 0 * V_halo) * 4 * 9], L * L * L * 4 * 9 * 2, MPI_DOUBLE,
               topo.xL, 0, topo.cart_comm, &reqs[0]);
-    MPI_Irecv(&field.links[(V + 1 * V_halo) * 4 * 9], L * L * L * 4 * 9, MPI_DOUBLE_COMPLEX,
+    MPI_Irecv(&field.links[(V + 1 * V_halo) * 4 * 9], L * L * L * 4 * 9 * 2, MPI_DOUBLE,
               topo.yL, 1, topo.cart_comm, &reqs[1]);
-    MPI_Irecv(&field.links[(V + 2 * V_halo) * 4 * 9], L * L * L * 4 * 9, MPI_DOUBLE_COMPLEX,
+    MPI_Irecv(&field.links[(V + 2 * V_halo) * 4 * 9], L * L * L * 4 * 9 * 2, MPI_DOUBLE,
               topo.zL, 2, topo.cart_comm, &reqs[2]);
-    MPI_Irecv(&field.links[(V + 3 * V_halo) * 4 * 9], L * L * L * 4 * 9, MPI_DOUBLE_COMPLEX,
+    MPI_Irecv(&field.links[(V + 3 * V_halo) * 4 * 9], L * L * L * 4 * 9 * 2, MPI_DOUBLE,
               topo.tL, 3, topo.cart_comm, &reqs[3]);
-    MPI_Irecv(&field.links[(V + 4 * V_halo) * 4 * 9], L * L * L * 4 * 9, MPI_DOUBLE_COMPLEX,
+    MPI_Irecv(&field.links[(V + 4 * V_halo) * 4 * 9], L * L * L * 4 * 9 * 2, MPI_DOUBLE,
               topo.x0, 4, topo.cart_comm, &reqs[4]);
-    MPI_Irecv(&field.links[(V + 5 * V_halo) * 4 * 9], L * L * L * 4 * 9, MPI_DOUBLE_COMPLEX,
+    MPI_Irecv(&field.links[(V + 5 * V_halo) * 4 * 9], L * L * L * 4 * 9 * 2, MPI_DOUBLE,
               topo.y0, 5, topo.cart_comm, &reqs[5]);
-    MPI_Irecv(&field.links[(V + 6 * V_halo) * 4 * 9], L * L * L * 4 * 9, MPI_DOUBLE_COMPLEX,
+    MPI_Irecv(&field.links[(V + 6 * V_halo) * 4 * 9], L * L * L * 4 * 9 * 2, MPI_DOUBLE,
               topo.z0, 6, topo.cart_comm, &reqs[6]);
-    MPI_Irecv(&field.links[(V + 7 * V_halo) * 4 * 9], L * L * L * 4 * 9, MPI_DOUBLE_COMPLEX,
+    MPI_Irecv(&field.links[(V + 7 * V_halo) * 4 * 9], L * L * L * 4 * 9 * 2, MPI_DOUBLE,
               topo.t0, 7, topo.cart_comm, &reqs[7]);
     // Setting up the sends
-    MPI_Isend(halo.x0.data(), L * L * L * 4 * 9, MPI_DOUBLE_COMPLEX, topo.x0, 0, topo.cart_comm,
+    MPI_Isend(halo.x0.data(), L * L * L * 4 * 9 * 2, MPI_DOUBLE, topo.x0, 0, topo.cart_comm,
               &reqs[8]);
-    MPI_Isend(halo.y0.data(), L * L * L * 4 * 9, MPI_DOUBLE_COMPLEX, topo.y0, 1, topo.cart_comm,
+    MPI_Isend(halo.y0.data(), L * L * L * 4 * 9 * 2, MPI_DOUBLE, topo.y0, 1, topo.cart_comm,
               &reqs[9]);
-    MPI_Isend(halo.z0.data(), L * L * L * 4 * 9, MPI_DOUBLE_COMPLEX, topo.z0, 2, topo.cart_comm,
+    MPI_Isend(halo.z0.data(), L * L * L * 4 * 9 * 2, MPI_DOUBLE, topo.z0, 2, topo.cart_comm,
               &reqs[10]);
-    MPI_Isend(halo.t0.data(), L * L * L * 4 * 9, MPI_DOUBLE_COMPLEX, topo.t0, 3, topo.cart_comm,
+    MPI_Isend(halo.t0.data(), L * L * L * 4 * 9 * 2, MPI_DOUBLE, topo.t0, 3, topo.cart_comm,
               &reqs[11]);
-    MPI_Isend(halo.xL.data(), L * L * L * 4 * 9, MPI_DOUBLE_COMPLEX, topo.xL, 4, topo.cart_comm,
+    MPI_Isend(halo.xL.data(), L * L * L * 4 * 9 * 2, MPI_DOUBLE, topo.xL, 4, topo.cart_comm,
               &reqs[12]);
-    MPI_Isend(halo.yL.data(), L * L * L * 4 * 9, MPI_DOUBLE_COMPLEX, topo.yL, 5, topo.cart_comm,
+    MPI_Isend(halo.yL.data(), L * L * L * 4 * 9 * 2, MPI_DOUBLE, topo.yL, 5, topo.cart_comm,
               &reqs[13]);
-    MPI_Isend(halo.zL.data(), L * L * L * 4 * 9, MPI_DOUBLE_COMPLEX, topo.zL, 6, topo.cart_comm,
+    MPI_Isend(halo.zL.data(), L * L * L * 4 * 9 * 2, MPI_DOUBLE, topo.zL, 6, topo.cart_comm,
               &reqs[14]);
-    MPI_Isend(halo.tL.data(), L * L * L * 4 * 9, MPI_DOUBLE_COMPLEX, topo.tL, 7, topo.cart_comm,
+    MPI_Isend(halo.tL.data(), L * L * L * 4 * 9 * 2, MPI_DOUBLE, topo.tL, 7, topo.cart_comm,
               &reqs[15]);
     // Waiting for sync
     MPI_Waitall(16, reqs, MPI_STATUSES_IGNORE);
@@ -544,7 +546,7 @@ void mpi::ecmccb::fill_and_exchange(GaugeField& field, const GeometryCB& geo, Ha
 
 // Sends and receive all the send buffers of halo_obs into the correct recv buffers
 void mpi::haloobs::exchange_halos_obs(HaloObs& halo_obs, mpi::MpiTopology& topo,
-                                          MPI_Request* reqs) {
+                                      MPI_Request* reqs) {
     // Set up the recv buffers
     MPI_Irecv(halo_obs.fx0_recv.data(), halo_obs.V * 4 * 18, MPI_DOUBLE, topo.x0, 0, topo.cart_comm,
               &reqs[0]);
@@ -583,10 +585,9 @@ void mpi::haloobs::exchange_halos_obs(HaloObs& halo_obs, mpi::MpiTopology& topo,
     // optimize data flux
 }
 
-
 // Fills the send buffers of halo_obs with the corresponding faces of the gauge field
-void mpi::haloobs::fill_halo_obs_send(const GaugeField& field, const GeometryCB &geo,
-                                          HaloObs& halo_obs) {
+void mpi::haloobs::fill_halo_obs_send(const GaugeField& field, const GeometryCB& geo,
+                                      HaloObs& halo_obs) {
     int L = geo.L;
     for (int c3 = 0; c3 < L; c3++) {
         for (int c2 = 0; c2 < L; c2++) {
