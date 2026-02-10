@@ -2,7 +2,7 @@
 
 #SBATCH --job-name=test_hb_cb
 #SBATCH --output=%x.o
-#SBATCH --time=00:20:00
+#SBATCH --time=02:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=16
 #SBATCH --ntasks-per-node=16
