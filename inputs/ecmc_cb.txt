@@ -1,0 +1,13 @@
+L_core=5
+n_core_dims=2
+cold_start=false
+N_shift=2
+N_switch_eo=3
+seed=12345
+
+beta=6.0
+N_samples=30
+param_theta_sample=350
+param_theta_refresh=150
+poisson=false
+epsilon_set=0.15

@@ -43,6 +43,17 @@ struct RunParams {
     ECMCParams ecmc_params{};
 };
 
+
+struct RunParamsECB {
+    int L_core = 6;
+    int n_core_dims = 2;
+    bool cold_start = true;
+    int seed = 123;
+    int N_switch_eo = 3; //Number of switch even/odd per shift
+    int N_shift = 2; //Number of shifts
+    ECMCParams ecmc_params{}; //Params of the ECMC for each even/odd update
+};
+
 struct RunParamsCB {
     int L_core = 6;
     int n_core_dims = 2;
@@ -86,6 +97,17 @@ struct RunParamsHbMPI {
     bool stype_pos=true; //Are the shifts positives ?
     int seed = 123;
     HbParams hp{};
+};
+
+
+struct RunParamsHbCB {
+    int L_core = 6;
+    int n_core_dims = 2;
+    bool cold_start = true;
+    int N_switch_eo = 3; //Number of switch even/odd per shift
+    int N_shift = 2; //Number of shifts
+    int seed = 123;
+    HbParams hp{}; // Hb params for each even/odd update
 };
 
 #endif //ECMC_MPI_PARAMS_H
