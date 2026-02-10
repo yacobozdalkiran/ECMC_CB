@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=test_ecmc_cb
+#SBATCH --job-name=test_hb_cb
 #SBATCH --output=%x.o
-#SBATCH --time=02:00:00
+#SBATCH --time=00:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=16
 #SBATCH --ntasks-per-node=16
@@ -12,4 +12,4 @@
 source modules_load.sh
 
 # Run MPI script
-srun build/gauge_ecmc_cb inputs/ecmc_cb.txt
+srun build/gauge_hb_cb inputs/hb_cb.txt

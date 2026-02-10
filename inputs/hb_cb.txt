@@ -1,8 +1,8 @@
-L_core=5
+L_core=4
 n_core_dims=2
 cold_start=false
-N_shift=2
-N_switch_eo=3
+N_shift=100
+N_switch_eo=4
 seed=12345
 
 beta = 6.0
