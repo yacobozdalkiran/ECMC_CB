@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=hot30k
+#SBATCH --job-name=test_ecmc_cb
 #SBATCH --output=%x.o
 #SBATCH --time=02:00:00
 #SBATCH --nodes=1
