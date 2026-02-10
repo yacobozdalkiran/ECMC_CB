@@ -58,7 +58,6 @@ std::vector<double> mpi::heatbathcb::samples(GaugeField& field, const GeometryCB
             }
         }
         // Sample
-        mpi::haloscb::fill_and_exchange(field, geo, halo_cb, topo);
         double p = mpi::nohalo::mean_plaquette_global(field, geo, topo, halo_cb);
         if (topo.rank == 0) {
             std::cout << "Sample " << m << ", <P> = " << p << " ";

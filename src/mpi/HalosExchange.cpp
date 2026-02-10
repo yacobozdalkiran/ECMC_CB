@@ -20,9 +20,9 @@ void mpi::shiftcb::fill_halo_send(const GaugeField& field, const GeometryCB& geo
         for (int t = 0; t < geo.L; t++) {
             for (int z = 0; z < geo.L; z++) {
                 for (int y = 0; y < geo.L; y++) {
-                    for (int x_local = 0; x_local < halo.L_shift; x_local++) {
+                    for (int x_local = 0; x_local < sp.L_shift; x_local++) {
                         int x_glob = x_local;
-                        if (sp.stype == pos) x_glob = x_local + geo.L - halo.L_shift;
+                        if (sp.stype == pos) x_glob = x_local + geo.L - sp.L_shift;
                         size_t site_glob = geo.index(x_glob, y, z, t);
                         size_t site_loc = halo.index_halo(x_local, y, z, t, sp);
                         for (int mu = 0; mu < 4; mu++) {
@@ -38,10 +38,10 @@ void mpi::shiftcb::fill_halo_send(const GaugeField& field, const GeometryCB& geo
     if (sp.coord == Y) {
         for (int t = 0; t < geo.L; t++) {
             for (int z = 0; z < geo.L; z++) {
-                for (int y_local = 0; y_local < halo.L_shift; y_local++) {
+                for (int y_local = 0; y_local < sp.L_shift; y_local++) {
                     for (int x = 0; x < geo.L; x++) {
                         int y_glob = y_local;
-                        if (sp.stype == pos) y_glob = y_local + geo.L - halo.L_shift;
+                        if (sp.stype == pos) y_glob = y_local + geo.L - sp.L_shift;
                         size_t site_glob = geo.index(x, y_glob, z, t);
                         size_t site_loc = halo.index_halo(x, y_local, z, t, sp);
                         for (int mu = 0; mu < 4; mu++) {
@@ -56,11 +56,11 @@ void mpi::shiftcb::fill_halo_send(const GaugeField& field, const GeometryCB& geo
 
     if (sp.coord == Z) {
         for (int t = 0; t < geo.L; t++) {
-            for (int z_local = 0; z_local < halo.L_shift; z_local++) {
+            for (int z_local = 0; z_local < sp.L_shift; z_local++) {
                 for (int y = 0; y < geo.L; y++) {
                     for (int x = 0; x < geo.L; x++) {
                         int z_glob = z_local;
-                        if (sp.stype == pos) z_glob = z_local + geo.L - halo.L_shift;
+                        if (sp.stype == pos) z_glob = z_local + geo.L - sp.L_shift;
                         size_t site_glob = geo.index(x, y, z_glob, t);
                         size_t site_loc = halo.index_halo(x, y, z_local, t, sp);
                         for (int mu = 0; mu < 4; mu++) {
@@ -74,12 +74,12 @@ void mpi::shiftcb::fill_halo_send(const GaugeField& field, const GeometryCB& geo
     }
 
     if (sp.coord == T) {
-        for (int t_local = 0; t_local < halo.L_shift; t_local++) {
+        for (int t_local = 0; t_local < sp.L_shift; t_local++) {
             for (int z = 0; z < geo.L; z++) {
                 for (int y = 0; y < geo.L; y++) {
                     for (int x = 0; x < geo.L; x++) {
                         int t_glob = t_local;
-                        if (sp.stype == pos) t_glob = t_local + geo.L - halo.L_shift;
+                        if (sp.stype == pos) t_glob = t_local + geo.L - sp.L_shift;
                         size_t site_glob = geo.index(x, y, z, t_glob);
                         size_t site_loc = halo.index_halo(x, y, z, t_local, sp);
                         for (int mu = 0; mu < 4; mu++) {
@@ -95,10 +95,9 @@ void mpi::shiftcb::fill_halo_send(const GaugeField& field, const GeometryCB& geo
 
 // Shifts the value of all the links of the lattice of L_shift in direction +coord if stype = pos,
 // -coord if stpye = neg
-void mpi::shiftcb::shift_field(GaugeField& field, const GeometryCB& geo, HalosShift& halo,
-                               const ShiftParams& sp) {
+void mpi::shiftcb::shift_field(GaugeField& field, const GeometryCB& geo, const ShiftParams& sp) {
     int L = geo.L;
-    int L_shift = halo.L_shift;
+    int L_shift = sp.L_shift;
     halo_coord coord = sp.coord;
     // We want to avoid cache misses -> we follow the layout of the gauge field and have to write a
     // different loop each time
@@ -294,7 +293,7 @@ void mpi::shiftcb::exchange_halos(HalosShift& halo, mpi::MpiTopology& topo, cons
 void mpi::shiftcb::fill_lattice_with_halo_recv(GaugeField& field, const GeometryCB& geo,
                                                HalosShift& halo, const ShiftParams& sp) {
     int L = geo.L;
-    int L_shift = halo.L_shift;
+    int L_shift = sp.L_shift;
     // If positive shift, the local coordinates of the halo corresponds to the coordinates of the
     // lattice
     if (sp.stype == pos) {
@@ -458,13 +457,13 @@ void mpi::shiftcb::shift(GaugeField& field, const GeometryCB& geo, HalosShift& h
     MPI_Request reqs[2];
     fill_halo_send(field, geo, halo, sp);
     exchange_halos(halo, topo, sp, reqs);
-    shift_field(field, geo, halo, sp);
+    shift_field(field, geo, sp);
     MPI_Waitall(2, reqs, MPI_STATUSES_IGNORE);
     fill_lattice_with_halo_recv(field, geo, halo, sp);
 }
 
 void mpi::shiftcb::random_shift(GaugeField& field, const GeometryCB& geo, HalosShift& halo,
-                                MpiTopology& topo, ShiftParams& sp, std::mt19937_64& rng) {
+                                MpiTopology& topo, ShiftParams& sp, HalosCB& halo_cb, std::mt19937_64& rng) {
     int l_shift_x{}, l_shift_y{}, l_shift_z{}, l_shift_t{};
     std::uniform_int_distribution<int> rand_l_shift(0, geo.L - 1);
     l_shift_x = rand_l_shift(rng);
@@ -497,6 +496,7 @@ void mpi::shiftcb::random_shift(GaugeField& field, const GeometryCB& geo, HalosS
     sp.coord = T;
     sp.L_shift = l_shift_t;
     mpi::shiftcb::shift(field, geo, halo, topo, sp);
+    mpi::haloscb::fill_and_exchange(field, geo, halo_cb, topo);
 }
 
 // Fills the halos with links of coord 0 or L-1 depending
@@ -530,8 +530,8 @@ void mpi::haloscb::fill_halos_ecmc(const GaugeField& field, const GeometryCB& ge
 }
 
 // Fills the halos in GaugeField with content of HalosCB of neighbors
-void mpi::haloscb::exchange_halos_ecmc(GaugeField& field, const GeometryCB& geo, const HalosCB& halo,
-                                      mpi::MpiTopology& topo) {
+void mpi::haloscb::exchange_halos_ecmc(GaugeField& field, const GeometryCB& geo,
+                                       const HalosCB& halo, mpi::MpiTopology& topo) {
     MPI_Request reqs[16];
     int L = geo.L;
     int V = geo.V;
@@ -576,7 +576,7 @@ void mpi::haloscb::exchange_halos_ecmc(GaugeField& field, const GeometryCB& geo,
 
 // Fills the halos send and exchanges with the field
 void mpi::haloscb::fill_and_exchange(GaugeField& field, const GeometryCB& geo, HalosCB& halo,
-                                    mpi::MpiTopology& topo) {
+                                     mpi::MpiTopology& topo) {
     fill_halos_ecmc(field, geo, halo);
     exchange_halos_ecmc(field, geo, halo, topo);
 }
