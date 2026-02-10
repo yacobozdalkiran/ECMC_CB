@@ -7,5 +7,5 @@ seed=12345
 
 beta = 6.0
 N_samples = 30
-N_sweeps = 2
-N_hits = 8
+N_sweeps = 10
+N_hits = 2
