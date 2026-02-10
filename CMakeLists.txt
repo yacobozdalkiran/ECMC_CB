@@ -18,6 +18,8 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/usqcd-software/c-lime.git
         GIT_TAG        master  # Ou un tag spécifique comme v1.3.2
 )
+# Rend les cibles de C-LIME disponibles
+FetchContent_MakeAvailable(lime)
 
 if(NOT Eigen3_FOUND)
     message(STATUS "Eigen3 not found. Download via FetchContent...")
