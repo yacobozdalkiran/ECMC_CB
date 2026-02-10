@@ -81,7 +81,7 @@ void generate_hb_cb(const RunParamsHbCB& rp) {
                 std::cout << "Shift : " << i << ", Switch : " << j << ", Parity : Odd\n";
             }
             active_parity = odd;
-            plaquette[i][j][0] =
+            plaquette[i][j][1] =
                 mpi::heatbathcb::samples(field, geo, topo, hp, rng, active_parity, halo_cb);
         }
 
