@@ -1,12 +1,12 @@
 L_core=4
 n_core_dims=2
 cold_start=false
-N_shift=100
-N_switch_eo=4
+N_shift=2000
+N_switch_eo=2
 seed=12345
 
 beta=6.0
-N_samples=30
+N_samples=3
 param_theta_sample=250
 param_theta_refresh=150
 poisson=false
