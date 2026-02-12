@@ -3,7 +3,6 @@
 //
 
 #include "heatbath_mpi.h"
-#include "../mpi/HalosExchange.h"
 #include "../observables/observables_mpi.h"
 #include "heatbath.h"
 
